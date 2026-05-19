@@ -1,22 +1,34 @@
+import sys
 import pygame
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT
-from logger import log_state
+from logger import log_state, log_event 
 from player import Player
+from asteroid import Asteroid
+from asteroidfield import AsteroidField
+from shot import Shot  # <--- Don't forget to import Shot!
 
 def main():
     pygame.init()
     
-    print(f"Starting Asteroids with pygame version: {pygame.version.ver}")
-    print(f"Screen width: {SCREEN_WIDTH}")
-    print(f"Screen height: {SCREEN_HEIGHT}")
-
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-
     clock = pygame.time.Clock()
     dt = 0
+    
+    updatable = pygame.sprite.Group()
+    drawable = pygame.sprite.Group()
+    asteroids = pygame.sprite.Group()
+    shots = pygame.sprite.Group()  # <--- Step 3: Create the shots group
 
-    # Step 6: Instantiate a Player object in the middle of the screen
+    Asteroid.containers = (asteroids, updatable, drawable)
+    AsteroidField.containers = (updatable,)
+    
+    # Step 4: Add Shot to containers (shots, updatable, drawable)
+    Shot.containers = (shots, updatable, drawable)
+    
+    Player.containers = (updatable, drawable)
+
     player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+    asteroid_field = AsteroidField()
 
     while True:
         log_state()
@@ -25,19 +37,27 @@ def main():
             if event.type == pygame.QUIT:
                 return
 
-        player.update(dt)
-        # Fill the screen black FIRST
+        updatable.update(dt)
+
+        for asteroid in asteroids:
+            if asteroid.collides_with(player):
+                log_event("player_hit")
+                print("Game over!")
+                sys.exit(0)
+
+        for asteroid in asteroids:
+            for shot in shots:
+                if asteroid.collides_with(shot):
+                    log_event("asteroid_shot")
+                    shot.kill()
+                    asteroid.split()
+
         screen.fill("black")
-        
-        # Step 7: Draw the player AFTER filling the screen black, but BEFORE flipping
-        player.draw(screen)
-
-        # Flip the display LAST
+        for obj in drawable:
+            obj.draw(screen)
+            
         pygame.display.flip()
-
         dt = clock.tick(60) / 1000
 
 if __name__ == "__main__":
     main()
-
-
